@@ -3,54 +3,66 @@ import catalog from "./db/catalog.js";
 import { ProductRow } from "./components/product-row.js";
 import { Cart } from "./components/cart.js";
 
-const App = () => {
-  const app = document.createElement("div");
-  app.className = "container mx-auto px-4";
+const app = document.querySelector("#app");
 
-  // Header
-  const header = document.createElement("header");
-  header.className = "py-6 mb-8";
-
-  const title = document.createElement("h1");
-  title.className = "text-3xl font-bold";
-  title.textContent = "Tech Store";
-  header.appendChild(title);
-
-  const mainContent = document.createElement("div");
-  mainContent.className = "flex flex-row gap-8";
-
-  const productsSection = document.createElement("div");
-  productsSection.className = "w-2/3";
-
-  const productsGrid = document.createElement("div");
-  productsGrid.className = "space-y-8";
-
-  const render = (state) => {
-    productsGrid.innerHTML = "";
-    state.products.forEach((product) => {
-      productsGrid.appendChild(ProductRow(product));
-    });
-  };
-
-  productsSection.appendChild(productsGrid);
-
-  const cartSection = Cart();
-  cartSection.className = "w-1/3";
-
-  createStore.subscribe(render);
-  render(createStore.getState());
-
-  mainContent.append(productsSection, cartSection);
-  app.append(header, mainContent);
-  return app;
-};
-
-// Initialize
+// Initialize state
 createStore.setState({
   products: catalog,
   cart: [],
 });
 
-document.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("app").appendChild(App());
-});
+// Add global handler for remove from cart
+window.removeFromCart = (productId) => {
+  const state = createStore.getState();
+  createStore.setState({
+    cart: state.cart.filter((item) => item.productId !== productId),
+  });
+};
+
+// Add global handler for add to cart
+window.addToCart = (productId) => {
+  const state = createStore.getState();
+  const currentCart = state.cart;
+  const existingItem = currentCart.find((item) => item.productId === productId);
+
+  if (existingItem) {
+    createStore.setState({
+      cart: currentCart.map((item) =>
+        item.productId === productId
+          ? { ...item, quantity: item.quantity + 1 }
+          : item,
+      ),
+    });
+  } else {
+    createStore.setState({
+      cart: [...currentCart, { productId, quantity: 1 }],
+    });
+  }
+};
+
+function render() {
+  const state = createStore.getState();
+
+  app.innerHTML = `
+        <div class="container mx-auto px-4">
+            <header class="py-6 mb-8">
+                <h1 class="text-3xl font-bold">Tech Store</h1>
+            </header>
+            
+            <div class="flex flex-row gap-8">
+                <div class="w-2/3">
+                    <div class="space-y-8">
+                        ${state.products.map((product) => ProductRow(product)).join("")}
+                    </div>
+                </div>
+                
+                <div class="w-1/3">
+                    ${Cart(state.cart, state.products)}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+createStore.subscribe(render);
+render();
